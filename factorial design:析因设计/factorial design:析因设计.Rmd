@@ -1,0 +1,79 @@
+---
+title: "Factorial Design"
+author: "Zhuoyu Jiang"
+date: "12/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message = FALSE)
+```
+
+```{R}
+Temperature<-rep(c(-1,1),8)
+Oil<-rep(c(-1,-1,1,1),4)
+Mixing<-rep(c(-1,-1,-1,-1,1,1,1,1),2)
+Sugar<-c(rep(-1,8),rep(1,8))
+score<-c(15.3,7.6,11.2,13,10.8,14,17.8,13.2,9,17.3,11,8.8,15,12.8,13,18.6)
+M<-data.frame("Temperature"=Temperature,"Oil"=Oil,"Mixing"=Mixing,"Sugar"=Sugar, "score"=score)
+y<- lm(score~Temperature+Oil+Mixing+Sugar)
+summary(y)
+anova(y)
+```
+
+# 1.
+```{R}
+library(FrF2)
+Temperature<-rep(c(-1,1),8)
+Oil<-rep(c(-1,-1,1,1),4)
+Mixing<-rep(c(rep(-1,4),rep(1,4)),2)
+Sugar<-c(rep(-1,8),rep(1,8))
+score<-c(15.3,7.6,11.2,13,10.8,14,17.8,13.2,9,17.3,11,8.8,15,12.8,13,18.6)
+M<-data.frame("Temperature"=Temperature,"Oil"=Oil,"Mixing"=Mixing,"Sugar"=Sugar, "score"=score)
+model.fit<-lm(score~Temperature*Oil*Mixing*Sugar)
+model.fit$effects
+#summary(model.fit)
+MEPlot(model.fit,show.alias=TRUE)
+IAPlot(model.fit)
+library(corrplot)
+corrplot(cor(M), type = 'upper', method = 'number', tl.cex = 0.6,tl.col = "black")
+```
+
+# 2.
+```{R}
+library(ggDoE)
+half_normal(model.fit, method="Daniel", alpha=0.1, label_active = TRUE, margin_errors = TRUE, ref_line = TRUE)
+half_normal(model.fit, method="Lenth", alpha=0.1, label_active = TRUE, margin_errors = TRUE, ref_line = TRUE)
+half_normal(model.fit, method="Dong", alpha=0.1, label_active = TRUE, margin_errors = TRUE, ref_line = TRUE)
+```
+<br>At $\alpha=0.1$ level, `Temperature` * `Sugar`, `Oil` * `Mixing`, `Mixing`, `Temperature` * `Sugar` * `Oil` * `Mixing`, are four significant effects.
+
+# 3.
+
+As we can see in the plots above, `Temperature` * `Sugar`, `Oil` * `Mixing`,`Mixing`, `Temperature` * `Sugar` * `Oil` * `Mixing`, are four significant effects at level $\alpha$ = 0.1
+
+```{R}
+model.fit.main<-lm(score~I(Temperature*Sugar)+I(Oil*Mixing)+I(Mixing)+I(Temperature*Sugar*Oil*Mixing))
+summary(model.fit.main)
+```
+
+# 4.
+```{R}
+model.fit.main<-lm(score~I(Temperature*Sugar)+I(Oil*Mixing)+I(Mixing)+I(Temperature*Sugar*Oil*Mixing))
+plot(model.fit.main$residuals~model.fit.main$fitted.values, main="Fitted Values VS Residuals", xlab="fitted values(score)", ylab="residuals")
+fitline<-lm(model.fit.main$residuals~model.fit.main$fitted.values)
+abline(fitline)
+```
+The scatterplot shows the good setup for a linear regression: The data appear to be well modeled by a linear relationship between score and the four main effects, and the points appear to be randomly spread out about the line, with no discernible non-linear trends or indications of non-constant variance.
+
+# 5.
+
+```{R}
+library(ggplot2)
+M["RunOrder"]=c(3,9,12,6,14,16,7,1,11,13,5,15,2,8,10,4)
+ggplot(data=M, aes(x=RunOrder, y=score)) + geom_point()+ geom_smooth(method="lm") 
+```
+
+# 6.
+
+Run Order does not have a significant effect on the score, so the experiment is random. Randomization provides protection against extraneous factors affecting the results. Therefore, we can conclude that effects like `Temperature` * `Sugar`, `Oil` * `Mixing`, `Mixing`, `Temperature` * `Sugar` * `Oil` *`Mixing` are significant.
